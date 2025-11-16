@@ -1,14 +1,3 @@
-# tick.mcfunction - Runs every game tick (20 times per second)
-# Handles player movement and ice placing behavior
-# Ice placing activates per-player when holding any sword
-# Ice removal activates when ALL players are holding shovels
-
-#declare objective toggleFlag
-#declare objective placeToggle
-#declare objective iceActive
-#declare objective cleanupActive
-#declare objective sidebar
-
 # Update sidebar display
 function icegame:update_sidebar
 
