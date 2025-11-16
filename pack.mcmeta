@@ -1,0 +1,9 @@
+   {
+       "pack": {
+           "pack_format": 71,
+           "description": "§6§lIceGame §7| §0.9+\n§eBy Jackfrostbob333",
+           "supported_formats": [71,81],
+           "min_format": 71,
+           "max_format": 99
+       }
+   }

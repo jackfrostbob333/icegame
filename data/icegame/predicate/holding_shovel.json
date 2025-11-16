@@ -1,0 +1,41 @@
+{
+    "condition": "minecraft:any_of",
+    "terms": [
+        {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+                "equipment": {
+                    "mainhand": {
+                        "items": [
+                            "minecraft:wooden_shovel",
+                            "minecraft:stone_shovel",
+                            "minecraft:iron_shovel",
+                            "minecraft:golden_shovel",
+                            "minecraft:diamond_shovel",
+                            "minecraft:netherite_shovel"
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "condition": "minecraft:entity_properties",
+            "entity": "this",
+            "predicate": {
+                "equipment": {
+                    "offhand": {
+                        "items": [
+                            "minecraft:wooden_shovel",
+                            "minecraft:stone_shovel",
+                            "minecraft:iron_shovel",
+                            "minecraft:golden_shovel",
+                            "minecraft:diamond_shovel",
+                            "minecraft:netherite_shovel"
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}
