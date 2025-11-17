@@ -1,76 +1,76 @@
 # IceGame Datapack
 
-A Minecraft datapack that allows players to create platforms of blue ice as they move, enabling fast travel across the world.
+A Minecraft datapack that places temporary ice under players to enable fast movement and provides a per-player cleanup mode.
 
 ## Installation
 
-1. Copy the `icegame` folder into your world's `datapacks` directory
-2. Run `/reload` in-game
-3. The datapack will automatically set up when the world loads
+1. Copy the `icegame` folder into your world's `datapacks` directory.
+2. Run `/reload` in-game.
+3. The datapack's `setup` function runs automatically on load and prepares scoreboards/teams.
 
-## How It Works
+## Activation (current behavior)
 
-This datapack creates blue ice platforms under players as they walk and allows them to descend by crouching. It uses two mutually exclusive toggle systems - only one mode can be active at a time.
+This datapack uses item-based activation (per-player):
+- **Hold any sword** → Ice placing mode (places ice while you walk).
+- **Hold any shovel** → Cleanup mode (removes nearby ice).
 
-## Commands
+Activation is per-player (each player can be in a different mode simultaneously). Legacy toggle objectives (`placeToggle`, `toggleFlag`) are still created for compatibility but are not required for normal use.
 
-### `/function icegame:start_game`
-Toggles ice placing mode on/off for all players. When enabled:
-- Walking creates a 3x3 platform of blue ice under your feet
-- Crouching clears space around you and places ice below, allowing descent (stops at Y=-63 to prevent void death)
-- **Automatically disables ice removal mode** (the two modes are mutually exclusive)
-- Replaces all blocks except bedrock
-- Shows status of both toggles in chat
+## Commands / Quick controls
 
-### `/function icegame:cleanup`
-Toggles ice removal mode on/off for all players. When enabled:
-- Continuously removes all ice blocks (normal ice, packed ice, and blue ice) in a 16x16x16 area around each player
-- **Automatically disables ice placing mode** (the two modes are mutually exclusive)
-- Useful for cleaning up ice trails or resetting areas
-- Shows status of both toggles in chat
+- `/function icegame:set_ice_frosted` — switch to frosted ice (melts away)
+- `/function icegame:set_ice_regular` — switch to regular ice
+- `/function icegame:set_ice_packed` — switch to packed ice
+- `/function icegame:set_ice_blue` — switch to blue ice
 
-## Functions Explained
+You can still run `/reload` to reapply `setup` if needed.
 
-### Player Movement Functions
-- **placeblocks** - Runs when walking (not sneaking). Clears a 3x3x4 space and places a 3x3 blue ice sheet under the player. Replaces all blocks except bedrock using individual setblock commands.
-- **crouched** - Runs when sneaking/crouching. Clears a 3x3x3 space, places ice 2 blocks below, and teleports player down 0.5 blocks for smooth descent. Only teleports if above Y=-63 to prevent falling into the void. Replaces all blocks except bedrock.
+## Features & Behavior
 
-### Control Functions
-- **start_game** - Toggles the `placeToggle` scoreboard (0 = disabled, 1 = enabled) to control ice placing. Automatically sets `toggleFlag` to 0 when enabled. Shows both toggle states in chat.
-- **cleanup** - Toggles the `toggleFlag` scoreboard (0 = disabled, 1 = enabled) to control ice removal. Automatically sets `placeToggle` to 0 when enabled. Shows both toggle states in chat.
-- **clearout** - Removes all ice types in a 16x16x16 cube around the nearest player (runs continuously when toggleFlag = 1)
+### Ice placing (holding a sword)
+- Runs per-player while the player is holding any sword and not sneaking.
+- Places a 3×3 ice sheet directly under the player's feet (Y = -1).
+- Clears a 3×3×3 head/space area (Y = 0..2) to prevent suffocation and to remove water/lava/ice types in that region.
+- The placed ice type depends on the global `iceType` scoreboard. Default is **frosted ice**.
 
-### Setup Functions
-- **setup** - Runs automatically on datapack load. Creates scoreboard objectives and initializes player values to 0
-- **tick** - Runs every game tick (20 times per second). Checks player state and calls appropriate functions
+### Frosted ice behavior
+- Frosted ice is placed with `age=0` so it can naturally age and melt.
+- To avoid leaving water when frosted ice melts, the datapack runs `remove_water` (a per-tick cleanup) when frosted mode is active; this replaces nearby water with air so frosted ice effectively disappears instead of turning into water.
 
-## Scoreboard Objectives
+### Crouch descent (sneak)
+- While holding a sword and sneaking, the `crouched` function clears a 3×3×3 area and places ice two blocks below to allow safe descent, then teleports the player down 0.5 blocks (only if above Y=-63 to prevent void death).
 
-- **placeToggle** - Controls ice placing (0 = off, 1 = on)
-- **toggleFlag** - Controls ice removal (0 = off, 1 = on)
+### Cleanup mode (holding a shovel)
+- Runs per-player while holding a shovel.
+- Removes `blue_ice`, `packed_ice`, and `ice` in multiple smaller regions (center + +X/-X/+Z/-Z chunks) to cover a large area while avoiding command size limits.
+- The cleanup runs on a 10-tick cooldown (0.5 seconds) per player to prevent overload.
 
-## Tips
+### Visual UI and feedback
+- Titles: players receive short title notifications when they enter ice-placing mode.
+- Player list (Tab): players are assigned to colored teams with prefixes: `[IDLE]` (gray), `[PLAYING]` (aqua), `[CLEANING]` (yellow).
+- Sidebar: a simple sidebar objective shows counts of players by mode.
 
-- Blue ice is the fastest ice type in Minecraft and allows extremely fast movement with boats or when running
-- Use `/function icegame:cleanup` when ice trails become too messy
-- Both toggles start disabled (0) when players join - use the functions to enable them
-- **Ice placing and ice removal are mutually exclusive** - enabling one automatically disables the other
-- The datapack works per-player, so each player can have different toggle states
-- Bedrock is protected - the datapack will not destroy or replace bedrock blocks
-- Crouching descent stops at Y=-63 to prevent falling into the void
+### Safety and protections
+- Bedrock is never replaced (the code checks `unless block ... bedrock`).
+- Crouch descent and teleport avoid Y <= -63 to prevent void deaths.
+- The datapack sets `generic.fall_damage_multiplier` to `0` in `setup` to disable fall damage.
 
-## Technical Details
+## Internals (short)
+- Uses predicates in `data/icegame/predicate/` to detect held swords/shovels and sneaking.
+- Main loop is `data/icegame/functions/tick.mcfunction` (runs every tick). It updates teams, UI, and calls `placeblocks`, `crouched`, or `clearout` per player.
+- `clearout.mcfunction` uses several smaller `fill` commands instead of one giant 16×16×16 fill to stay within command limits.
+- `placeblocks.mcfunction` uses `setblock` for the 3×3 sheet and avoids overwriting bedrock or existing frosted ice.
 
-- Uses predicates to detect player sneaking state
-- Scheduled functions (1 tick delay) for crouching to ensure smooth execution
-- Scoreboard-based toggle system prevents conflicts when multiple players use commands simultaneously
-- Ice placing and ice removal modes are mutually exclusive - enabling one disables the other
-- Individual setblock commands with bedrock checks ensure bedrock is never replaced
-- Y-level check (Y >= -60) prevents players from teleporting into the void when descending
-- Chat feedback shows status of both toggles whenever either function is called
+## Scoreboards and persistent values
+- `iceActive` — per-player state (0 = idle, 1 = placing, 2 = cleaning in some code paths).
+- `cleanupCooldown` — per-player cooldown timer used by cleanup.
+- `iceType` — global value selecting which ice to place (0=frosted,1=ice,2=packed,3=blue).
+- `cleanupActive`, `toggleFlag`, `placeToggle` — legacy/compatibility objectives still created by `setup` but item/predicate-based activation is the primary mechanism.
 
 ## Compatibility
+- Pack format: uses pack_format 12 (adjust `pack.mcmeta` if targeting a different game version).
+- Works single-player and multiplayer. Designed to play nice with other datapacks by limiting replacements and preserving bedrock.
 
-- Requires Minecraft version with pack_format 12 or adjust `pack.mcmeta`
-- Works in both single-player and multiplayer
-- Should be compatible with most other datapacks
+## Notes & troubleshooting
+- If you see chat spam from older debug messages, `/reload` will pick up the current code (recent changes removed most chat spam and use titles instead).
+- If frosted ice seems to instantly disappear, ensure `iceType` is set to `0` only when you want the frosted behavior; `remove_water` runs while frosted mode is active and removes water left by melting.
